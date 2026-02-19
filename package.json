@@ -1,0 +1,19 @@
+{
+  "name": "keynotter",
+  "version": "1.0.0",
+  "description": "Simple Windows teleprompter app called KeyNotter",
+  "main": "simple/main.cjs",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "npm run simple",
+    "simple": "cross-env ELECTRON_RUN_AS_NODE= electron simple/main.cjs"
+  },
+  "dependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^30.5.1"
+  }
+}

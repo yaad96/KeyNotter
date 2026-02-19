@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyNotter</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        --panel-opacity: 0.97;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: rgba(0, 0, 0, var(--panel-opacity));
+      }
+
+      .root {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .card {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        background: rgba(0, 0, 0, var(--panel-opacity));
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .prompt-panel {
+        flex: 1;
+        min-height: 100px;
+        padding: 10px 14px;
+        overflow: auto;
+        -webkit-app-region: no-drag;
+      }
+
+      .text {
+        color: #fbfdff;
+        line-height: 1.35;
+        white-space: pre-wrap;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+        -webkit-app-region: no-drag;
+      }
+
+      .controls {
+        -webkit-app-region: no-drag;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(10, 13, 18, var(--panel-opacity));
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .metric {
+        min-width: 118px;
+        font-size: 12px;
+        color: #b9c4d6;
+      }
+
+      .muted {
+        font-size: 12px;
+        color: #a8b4c8;
+      }
+
+      button {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fbff;
+        font-size: 12px;
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      input[type='range'] {
+        width: 120px;
+      }
+
+      .resize-handle {
+        position: absolute;
+        z-index: 5;
+        -webkit-app-region: no-drag;
+      }
+
+      .edge-n {
+        top: 0;
+        left: 12px;
+        right: 12px;
+        height: 8px;
+        cursor: ns-resize;
+      }
+
+      .edge-s {
+        bottom: 0;
+        left: 12px;
+        right: 12px;
+        height: 8px;
+        cursor: ns-resize;
+      }
+
+      .edge-e {
+        top: 12px;
+        right: 0;
+        bottom: 12px;
+        width: 8px;
+        cursor: ew-resize;
+      }
+
+      .edge-w {
+        top: 12px;
+        left: 0;
+        bottom: 12px;
+        width: 8px;
+        cursor: ew-resize;
+      }
+
+      .edge-ne {
+        top: 0;
+        right: 0;
+        width: 14px;
+        height: 14px;
+        cursor: nesw-resize;
+      }
+
+      .edge-nw {
+        top: 0;
+        left: 0;
+        width: 14px;
+        height: 14px;
+        cursor: nwse-resize;
+      }
+
+      .edge-se {
+        right: 0;
+        bottom: 0;
+        width: 16px;
+        height: 16px;
+        cursor: nwse-resize;
+      }
+
+      .edge-sw {
+        left: 0;
+        bottom: 0;
+        width: 14px;
+        height: 14px;
+        cursor: nesw-resize;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="root">
+      <div class="card" id="card">
+        <section class="prompt-panel">
+          <div class="text" id="text"></div>
+        </section>
+
+        <section class="controls">
+          <div class="row">
+            <button id="play-pause">Play</button>
+            <button id="reset">Reset</button>
+            <button id="open-file">Open</button>
+            <button id="toggle-mode">Toggle Mode</button>
+            <span class="metric" id="mode">Mode: top_strip</span>
+            <span class="metric" id="status">Status: stopped</span>
+          </div>
+
+          <div class="row">
+            <button id="speed-down">Speed -</button>
+            <button id="speed-up">Speed +</button>
+            <span class="metric" id="speed">Speed: 65</span>
+
+            <button id="font-down">Font -</button>
+            <button id="font-up">Font +</button>
+            <span class="metric" id="font">Font: 46</span>
+
+            <span class="metric" id="opacity-label">Opacity: 97%</span>
+            <input id="opacity" type="range" min="20" max="100" step="1" />
+
+            <span class="metric" id="top-offset-label">Top Offset: 16</span>
+            <input id="top-offset" type="range" min="0" max="300" step="1" />
+          </div>
+
+          <div class="row muted">
+            <span id="last-file">Last file: Unsaved</span>
+            <span id="last-hotkey">Last hotkey: None</span>
+            <span id="message"></span>
+          </div>
+        </section>
+
+        <div class="resize-handle edge-n" data-edge="n"></div>
+        <div class="resize-handle edge-s" data-edge="s"></div>
+        <div class="resize-handle edge-e" data-edge="e"></div>
+        <div class="resize-handle edge-w" data-edge="w"></div>
+        <div class="resize-handle edge-ne" data-edge="ne"></div>
+        <div class="resize-handle edge-nw" data-edge="nw"></div>
+        <div class="resize-handle edge-se" data-edge="se"></div>
+        <div class="resize-handle edge-sw" data-edge="sw"></div>
+      </div>
+    </main>
+
+    <script>
+      const api = window.teleprompter;
+
+      const textNode = document.getElementById('text');
+      const promptPanel = document.querySelector('.prompt-panel');
+      const playPauseBtn = document.getElementById('play-pause');
+      const modeLabel = document.getElementById('mode');
+      const statusLabel = document.getElementById('status');
+      const speedLabel = document.getElementById('speed');
+      const fontLabel = document.getElementById('font');
+      const opacityLabel = document.getElementById('opacity-label');
+      const topOffsetLabel = document.getElementById('top-offset-label');
+      const opacityInput = document.getElementById('opacity');
+      const topOffsetInput = document.getElementById('top-offset');
+      const lastFileLabel = document.getElementById('last-file');
+      const lastHotkeyLabel = document.getElementById('last-hotkey');
+      const messageLabel = document.getElementById('message');
+      const resizeHandles = Array.from(document.querySelectorAll('.resize-handle'));
+
+      let state = null;
+      let cursorPx = 0;
+      let lastFrameTs = null;
+      let lastSyncedCursorPx = 0;
+      let lastCursorSyncTs = 0;
+      let localPromptStatus = 'stopped';
+      let suppressScrollSyncUntil = 0;
+
+      let isResizing = false;
+      let activeResizeEdge = 'se';
+      let activeResizeHandle = null;
+      let lastResizePointerX = 0;
+      let lastResizePointerY = 0;
+      let pendingResizeDeltaX = 0;
+      let pendingResizeDeltaY = 0;
+      let resizeFlushScheduled = false;
+
+      let isMoving = false;
+      let movePointerId = null;
+      let lastMovePointerX = 0;
+      let lastMovePointerY = 0;
+      let pendingMoveDeltaX = 0;
+      let pendingMoveDeltaY = 0;
+      let moveFlushScheduled = false;
+
+      const CURSOR_SYNC_INTERVAL_MS = 120;
+
+      const showMessage = (text) => {
+        messageLabel.textContent = text;
+      };
+
+      const setPromptStatus = (status) => {
+        if (status === 'playing' || status === 'paused') {
+          localPromptStatus = status;
+        } else {
+          localPromptStatus = 'stopped';
+        }
+
+        playPauseBtn.textContent = localPromptStatus === 'playing' ? 'Pause' : 'Play';
+        statusLabel.textContent = `Status: ${localPromptStatus}`;
+      };
+
+      const setPromptScroll = (nextCursorPx) => {
+        const maxScroll = Math.max(0, promptPanel.scrollHeight - promptPanel.clientHeight);
+        const safeCursor = Number.isFinite(nextCursorPx) ? Math.max(0, nextCursorPx) : 0;
+        const targetCursor = Math.min(maxScroll, safeCursor);
+
+        suppressScrollSyncUntil = performance.now() + 40;
+        promptPanel.scrollTop = targetCursor;
+        cursorPx = targetCursor;
+      };
+
+      const syncCursor = (force = false) => {
+        const now = performance.now();
+
+        if (
+          !force &&
+          now - lastCursorSyncTs < CURSOR_SYNC_INTERVAL_MS &&
+          Math.abs(cursorPx - lastSyncedCursorPx) < 1
+        ) {
+          return;
+        }
+
+        lastCursorSyncTs = now;
+        lastSyncedCursorPx = cursorPx;
+
+        api.updateCursor({ cursorPx }).catch(() => {});
+      };
+
+      const patchSettings = async (patch) => {
+        try {
+          await api.updateSettings(patch);
+        } catch (error) {
+          showMessage(`Settings update failed: ${error.message || 'Unknown error'}`);
+        }
+      };
+
+      const sendCommand = async (command) => {
+        try {
+          await api.sendPromptCommand({ command });
+        } catch (error) {
+          showMessage(`Command failed: ${error.message || 'Unknown error'}`);
+        }
+      };
+
+      const renderState = (nextState) => {
+        const previousState = state;
+        state = nextState;
+
+        const scriptChanged =
+          !previousState ||
+          previousState.script.text !== nextState.script.text ||
+          previousState.script.lastFilePath !== nextState.script.lastFilePath;
+
+        if (scriptChanged || nextState.promptStatus === 'stopped') {
+          cursorPx = nextState.script.cursorPx;
+          lastFrameTs = null;
+        }
+
+        setPromptStatus(nextState.promptStatus);
+
+        document.documentElement.style.setProperty('--panel-opacity', String(nextState.settings.opacity));
+
+        textNode.style.fontSize = `${nextState.settings.fontSizePx}px`;
+        textNode.textContent = nextState.script.text;
+        setPromptScroll(cursorPx);
+
+        modeLabel.textContent = `Mode: ${nextState.settings.mode}`;
+        speedLabel.textContent = `Speed: ${nextState.settings.speedPxPerSec}`;
+        fontLabel.textContent = `Font: ${nextState.settings.fontSizePx}`;
+
+        const opacityPercent = Math.round(nextState.settings.opacity * 100);
+        opacityLabel.textContent = `Opacity: ${opacityPercent}%`;
+        topOffsetLabel.textContent = `Top Offset: ${nextState.settings.topOffsetPx}`;
+
+        opacityInput.value = String(opacityPercent);
+        topOffsetInput.value = String(nextState.settings.topOffsetPx);
+
+        lastFileLabel.textContent = `Last file: ${nextState.script.lastFilePath || 'Unsaved'}`;
+      };
+
+      const tick = (frameTs) => {
+        if (state) {
+          if (localPromptStatus === 'playing') {
+            if (lastFrameTs === null) {
+              lastFrameTs = frameTs;
+            }
+
+            const deltaMs = frameTs - lastFrameTs;
+            lastFrameTs = frameTs;
+
+            const maxScroll = Math.max(0, promptPanel.scrollHeight - promptPanel.clientHeight);
+            cursorPx = Math.min(
+              maxScroll,
+              Math.max(0, cursorPx + (deltaMs / 1000) * state.settings.speedPxPerSec)
+            );
+
+            setPromptScroll(cursorPx);
+            syncCursor(false);
+          } else {
+            lastFrameTs = frameTs;
+          }
+        }
+
+        requestAnimationFrame(tick);
+      };
+
+      const flushResize = () => {
+        resizeFlushScheduled = false;
+
+        const deltaX = pendingResizeDeltaX;
+        const deltaY = pendingResizeDeltaY;
+        pendingResizeDeltaX = 0;
+        pendingResizeDeltaY = 0;
+
+        if (deltaX === 0 && deltaY === 0) {
+          return;
+        }
+
+        api.resizeOverlay({ edge: activeResizeEdge, deltaX, deltaY }).catch(() => {});
+      };
+
+      const onResizePointerMove = (event) => {
+        if (!isResizing) {
+          return;
+        }
+
+        pendingResizeDeltaX += event.screenX - lastResizePointerX;
+        pendingResizeDeltaY += event.screenY - lastResizePointerY;
+        lastResizePointerX = event.screenX;
+        lastResizePointerY = event.screenY;
+
+        if (!resizeFlushScheduled) {
+          resizeFlushScheduled = true;
+          requestAnimationFrame(flushResize);
+        }
+      };
+
+      const endResize = (event) => {
+        if (!isResizing) {
+          return;
+        }
+
+        isResizing = false;
+        flushResize();
+
+        if (
+          activeResizeHandle &&
+          event &&
+          typeof event.pointerId === 'number' &&
+          activeResizeHandle.hasPointerCapture(event.pointerId)
+        ) {
+          activeResizeHandle.releasePointerCapture(event.pointerId);
+        }
+
+        activeResizeHandle = null;
+      };
+
+      const startResize = (event) => {
+        isResizing = true;
+        activeResizeHandle = event.currentTarget;
+        activeResizeEdge = activeResizeHandle.dataset.edge || 'se';
+        lastResizePointerX = event.screenX;
+        lastResizePointerY = event.screenY;
+        activeResizeHandle.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      };
+
+      const flushMove = () => {
+        moveFlushScheduled = false;
+
+        const deltaX = pendingMoveDeltaX;
+        const deltaY = pendingMoveDeltaY;
+        pendingMoveDeltaX = 0;
+        pendingMoveDeltaY = 0;
+
+        if (deltaX === 0 && deltaY === 0) {
+          return;
+        }
+
+        api.moveOverlay({ deltaX, deltaY }).catch(() => {});
+      };
+
+      const onMovePointerMove = (event) => {
+        if (!isMoving || event.pointerId !== movePointerId) {
+          return;
+        }
+
+        pendingMoveDeltaX += event.screenX - lastMovePointerX;
+        pendingMoveDeltaY += event.screenY - lastMovePointerY;
+        lastMovePointerX = event.screenX;
+        lastMovePointerY = event.screenY;
+
+        if (!moveFlushScheduled) {
+          moveFlushScheduled = true;
+          requestAnimationFrame(flushMove);
+        }
+
+        event.preventDefault();
+      };
+
+      const endMove = (event) => {
+        if (!isMoving) {
+          return;
+        }
+
+        if (event && typeof event.pointerId === 'number' && event.pointerId !== movePointerId) {
+          return;
+        }
+
+        isMoving = false;
+        flushMove();
+
+        if (movePointerId != null && promptPanel.hasPointerCapture(movePointerId)) {
+          promptPanel.releasePointerCapture(movePointerId);
+        }
+
+        movePointerId = null;
+      };
+
+      const startMove = (event) => {
+        if (event.button !== 0 || isResizing) {
+          return;
+        }
+
+        const verticalScrollbarWidth = promptPanel.offsetWidth - promptPanel.clientWidth;
+        const horizontalScrollbarHeight = promptPanel.offsetHeight - promptPanel.clientHeight;
+        const inVerticalScrollbar = verticalScrollbarWidth > 0 && event.offsetX >= promptPanel.clientWidth;
+        const inHorizontalScrollbar = horizontalScrollbarHeight > 0 && event.offsetY >= promptPanel.clientHeight;
+
+        if (inVerticalScrollbar || inHorizontalScrollbar) {
+          return;
+        }
+
+        isMoving = true;
+        movePointerId = event.pointerId;
+        lastMovePointerX = event.screenX;
+        lastMovePointerY = event.screenY;
+        pendingMoveDeltaX = 0;
+        pendingMoveDeltaY = 0;
+
+        promptPanel.setPointerCapture(movePointerId);
+
+        if (state && state.settings.mode !== 'floating') {
+          patchSettings({ mode: 'floating' });
+        }
+
+        event.preventDefault();
+      };
+
+      playPauseBtn.addEventListener('click', () => {
+        const nextStatus = localPromptStatus === 'playing' ? 'paused' : 'playing';
+        setPromptStatus(nextStatus);
+        lastFrameTs = null;
+
+        if (nextStatus !== 'playing') {
+          syncCursor(true);
+        }
+
+        sendCommand('toggle_play');
+      });
+
+      document.getElementById('reset').addEventListener('click', () => {
+        setPromptStatus('stopped');
+        setPromptScroll(0);
+        lastFrameTs = null;
+        syncCursor(true);
+        sendCommand('reset');
+      });
+
+      document.getElementById('speed-up').addEventListener('click', () => {
+        sendCommand('speed_up');
+      });
+
+      document.getElementById('speed-down').addEventListener('click', () => {
+        sendCommand('speed_down');
+      });
+
+      document.getElementById('font-up').addEventListener('click', () => {
+        sendCommand('font_up');
+      });
+
+      document.getElementById('font-down').addEventListener('click', () => {
+        sendCommand('font_down');
+      });
+
+      document.getElementById('toggle-mode').addEventListener('click', () => {
+        sendCommand('mode_toggle');
+      });
+
+      document.getElementById('open-file').addEventListener('click', async () => {
+        try {
+          await api.openScriptFile();
+          showMessage('Opened script file.');
+        } catch (error) {
+          showMessage(`Open failed: ${error.message || 'Unknown error'}`);
+        }
+      });
+
+      opacityInput.addEventListener('input', () => {
+        patchSettings({ opacity: Number(opacityInput.value) / 100 });
+      });
+
+      topOffsetInput.addEventListener('input', () => {
+        patchSettings({ topOffsetPx: Number(topOffsetInput.value) });
+      });
+
+      promptPanel.addEventListener('scroll', () => {
+        if (performance.now() < suppressScrollSyncUntil) {
+          return;
+        }
+
+        cursorPx = promptPanel.scrollTop;
+        syncCursor(false);
+      });
+
+      promptPanel.addEventListener('pointerdown', startMove);
+      promptPanel.addEventListener('pointermove', onMovePointerMove);
+      promptPanel.addEventListener('pointerup', endMove);
+      promptPanel.addEventListener('pointercancel', endMove);
+
+      for (const handle of resizeHandles) {
+        handle.addEventListener('pointerdown', startResize);
+        handle.addEventListener('pointermove', onResizePointerMove);
+        handle.addEventListener('pointerup', endResize);
+        handle.addEventListener('pointercancel', endResize);
+      }
+
+      window.addEventListener('blur', () => {
+        endResize();
+        endMove();
+      });
+
+      api.onStateChanged((nextState) => {
+        const previousPromptStatus = localPromptStatus;
+        renderState(nextState);
+
+        if (previousPromptStatus === 'playing' && localPromptStatus !== 'playing') {
+          syncCursor(true);
+        }
+      });
+
+      api.onHotkeyEvent((event) => {
+        const time = new Date(event.triggeredAt).toLocaleTimeString();
+        lastHotkeyLabel.textContent = `Last hotkey: ${event.command} @ ${time}`;
+
+        if (event.command === 'toggle_play') {
+          const nextStatus = localPromptStatus === 'playing' ? 'paused' : 'playing';
+          setPromptStatus(nextStatus);
+          lastFrameTs = null;
+
+          if (nextStatus !== 'playing') {
+            syncCursor(true);
+          }
+        }
+
+        if (event.command === 'reset') {
+          setPromptStatus('stopped');
+          setPromptScroll(0);
+          lastFrameTs = null;
+          syncCursor(true);
+        }
+      });
+
+      (async () => {
+        const bootstrap = await api.getBootstrap();
+        renderState(bootstrap);
+        syncCursor(true);
+        requestAnimationFrame(tick);
+      })();
+
+      window.addEventListener('beforeunload', () => {
+        syncCursor(true);
+      });
+    </script>
+  </body>
+</html>
