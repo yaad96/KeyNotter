@@ -1,46 +1,51 @@
-# KeyNotter (Simple)
+# KeyNotter
 
-A simple Electron teleprompter called KeyNotter.
+KeyNotter is an Electron desktop teleprompter designed for real presentations: one focused window with the script and controls together.
 
-## What it does
+## Features
 
-- Single-window workflow: teleprompter + controls in one window
-- Camera-adjacent top strip mode
-- Floating mode
-- Draggable overlay panel
-- Resizable from any side/corner
-- Play/pause/reset controls and global hotkeys
-- Load `.txt` and `.md` files as UTF-8 plain text
-- Local autosave of settings + script state
+- Single-window teleprompter workflow
+- Always-on-top overlay behavior
+- Two display modes:
+  - `top_strip` for camera-adjacent positioning
+  - `floating` for free placement
+- Prompt viewport is manually scrollable so you can jump to any section
+- Play/Pause resumes from current position
+- Reset returns prompt position to the top
+- Speed control with fixed `10`-unit steps (`0` means no motion)
+- Font size controls
+- Opacity control (`100%` is fully opaque)
+- Top offset control for strip placement
+- Window movement by dragging in the prompt area
+- Window resizing from all edges and corners
+- Global hotkeys
+- Load script files from local disk (`.txt`, `.md`, UTF-8)
+- Local autosave of settings and last script state
 
 ## Requirements
 
-- Node `22.x` (`.nvmrc` is included)
+- Node `22.x` (`.nvmrc` included)
 - Windows 11 target runtime
 
 ## Run
 
 ```bash
 npm install
-npm run simple
+npm start
 ```
 
-This opens one window containing:
-- Teleprompter viewport
-- Controls directly under the viewport
-
-## Default hotkeys
+## Hotkeys
 
 - `Ctrl+Alt+Space`: Play/Pause
 - `Ctrl+Alt+R`: Reset
 - `Ctrl+Alt+Up`: Speed up
 - `Ctrl+Alt+Down`: Slow down
-- `Ctrl+Alt+Right`: Font size up
-- `Ctrl+Alt+Left`: Font size down
-- `Ctrl+Alt+M`: Toggle mode
+- `Ctrl+Alt+Right`: Increase font size
+- `Ctrl+Alt+Left`: Decrease font size
+- `Ctrl+Alt+M`: Toggle mode (`top_strip` / `floating`)
 
 ## Notes
 
-- Play/Pause resumes from current scroll position.
-- Opacity slider uses percentage (100% is fully opaque).
-- Manual resize forces floating mode so your custom size is preserved.
+- Manual scrolling sets the current playback position.
+- Playback continues from wherever you manually positioned the script.
+- Resizing and drag-move behavior are optimized for live presentation adjustments.
